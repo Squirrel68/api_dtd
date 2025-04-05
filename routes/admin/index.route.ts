@@ -1,28 +1,33 @@
-import adminUserRouter from "./admin-user.route"
-import adminAuthRouter from "./admin-auth.route"
-import adminCategoryRouter from "./admin-category.route"
-import adminProductRouter from "./admin-product.route"
+import adminUserRouter from './admin-user.route'
+import adminAuthRouter from './admin-auth.route'
+import adminCategoryRouter from './admin-category.route'
+import adminProductRouter from './admin-product.route'
+import shopRouter from './admin-shop.route'
 
 const adminRoutes = {
-  prefix: "/admin/",
+  prefix: '/admin/',
   routes: [
     {
-      path: "users",
-      route: adminUserRouter
+      path: 'users',
+      route: adminUserRouter,
     },
     {
-      path: "products",
-      route: adminProductRouter
+      path: 'products',
+      route: adminProductRouter,
     },
     {
-      path: "categories",
-      route: adminCategoryRouter
+      path: 'categories',
+      route: adminCategoryRouter,
     },
     {
-      path: "",
-      route: adminAuthRouter
-    }
-  ]
+      path: 'shop',
+      route: shopRouter,
+    },
+    {
+      path: '',
+      route: adminAuthRouter,
+    },
+  ],
 }
 
 export default adminRoutes

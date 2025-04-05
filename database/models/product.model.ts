@@ -13,6 +13,7 @@ const ProductSchema = new Schema(
     quantity: { type: Number, default: 0 },
     sold: { type: Number, default: 0 },
     view: { type: Number, default: 0 },
+    shop: { type: Schema.Types.ObjectId, ref: 'users' },
   },
   {
     timestamps: true,
