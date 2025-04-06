@@ -20,6 +20,14 @@ adminProductRouter.get(
   helpersMiddleware.entityValidator,
   wrapAsync(ProductController.getProducts)
 )
+adminProductRouter.get(
+  '/my-products',
+  authMiddleware.verifyAccessToken,
+  authMiddleware.verifyAdmin,
+  productMiddleware.getProductsRules(),
+  helpersMiddleware.entityValidator,
+  wrapAsync(ProductController.getMyProducts)
+)
 /**
  * [Get all products ]
  * @queryParam type: string, category:mongoId

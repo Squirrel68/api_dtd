@@ -54,6 +54,8 @@ const addProduct = async (req: Request, res: Response) => {
     sold,
     view,
   } = form
+  // get user id from jwt token
+  const userId = req.jwtDecoded.id
   const product = {
     name,
     description,
@@ -66,6 +68,7 @@ const addProduct = async (req: Request, res: Response) => {
     quantity,
     sold,
     view,
+    shop: userId,
   }
   const productAdd = await new ProductModel(product).save()
   const response = {
@@ -165,6 +168,22 @@ const getAllProducts = async (req: Request, res: Response) => {
   if (category) {
     condition = { category: category }
   }
+  let products: any = await ProductModel.find(condition)
+    .populate({ path: 'category' })
+    .sort({ createdAt: -1 })
+    .select({ __v: 0, description: 0 })
+    .lean()
+  products = products.map((product) => handleImageProduct(product))
+  const response = {
+    message: 'Lấy tất cả sản phẩm thành công',
+    data: products,
+  }
+  return responseSuccess(res, response)
+}
+const getMyProducts = async (req: Request, res: Response) => {
+  // get user id from jwt token
+  const userId = req.jwtDecoded.id
+  const condition = { shop: userId }
   let products: any = await ProductModel.find(condition)
     .populate({ path: 'category' })
     .sort({ createdAt: -1 })
@@ -335,6 +354,7 @@ const ProductController = {
   deleteManyProducts,
   uploadProductImage,
   uploadManyProductImages,
+  getMyProducts,
 }
 
 export default ProductController

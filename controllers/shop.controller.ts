@@ -3,6 +3,7 @@ import { responseSuccess, ErrorHandler } from '../utils/response'
 import { UserModel } from '../database/models/user.model'
 import { STATUS } from '../constants/status'
 import { omitBy } from 'lodash'
+import { ROLE } from '../constants/role.enum'
 
 const createShop = async (req: Request, res: Response) => {
   const { name, description, address, phone, avatar } = req.body
@@ -111,7 +112,7 @@ const updateShop = async (req: Request, res: Response) => {
   // Update user with shop data
   const updatedUser = await UserModel.findByIdAndUpdate(
     userId,
-    { shop },
+    { shop, roles: [ROLE.ADMIN] },
     { new: true }
   )
     .select({ password: 0, __v: 0 })
