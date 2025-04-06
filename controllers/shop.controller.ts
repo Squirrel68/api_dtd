@@ -90,11 +90,6 @@ const updateShop = async (req: Request, res: Response) => {
     throw new ErrorHandler(STATUS.BAD_REQUEST, 'Không tìm thấy người dùng')
   }
 
-  // Check if user has a shop
-  if (!userDB.shop || !userDB.shop.name) {
-    throw new ErrorHandler(STATUS.BAD_REQUEST, 'Bạn chưa có cửa hàng')
-  }
-
   // Create updated shop object
   const shopUpdate = omitBy(
     {
