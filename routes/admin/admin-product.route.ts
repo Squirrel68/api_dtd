@@ -4,6 +4,22 @@ import authMiddleware from '../../middleware/auth.middleware'
 import ProductController from '../../controllers/product.controller'
 import productMiddleware from '../../middleware/product.middleware'
 import { wrapAsync } from '../../utils/response'
+import multer from 'multer'
+
+// Cấu hình multer để lưu file tạm thời trong bộ nhớ
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // Giới hạn 10MB
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true)
+    } else {
+      cb(new Error('Chỉ chấp nhận file hình ảnh!') as any, false)
+    }
+  },
+})
 
 const adminProductRouter = Router()
 /**
@@ -51,6 +67,8 @@ adminProductRouter.get(
   helpersMiddleware.idValidator,
   wrapAsync(ProductController.getProduct)
 )
+
+// Create a new product
 adminProductRouter.post(
   '',
   authMiddleware.verifyAccessToken,
@@ -92,12 +110,14 @@ adminProductRouter.post(
   '/upload-image',
   authMiddleware.verifyAccessToken,
   authMiddleware.verifyAdmin,
+  upload.single('image'),
   wrapAsync(ProductController.uploadProductImage)
 )
 adminProductRouter.post(
   '/upload-images',
   authMiddleware.verifyAccessToken,
   authMiddleware.verifyAdmin,
+  upload.array('images', 10), // Giới hạn tối đa 10 file
   wrapAsync(ProductController.uploadManyProductImages)
 )
 export default adminProductRouter

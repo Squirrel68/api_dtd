@@ -10,14 +10,46 @@ import { FOLDERS, FOLDER_UPLOAD, ROUTE_IMAGE } from '../constants/config'
 import fs from 'fs'
 import { omitBy } from 'lodash'
 import { ORDER, SORT_BY } from '../constants/product'
+import cloudinary from 'cloudinary'
+import streamifier from 'streamifier'
 
+// Cấu hình Cloudinary
+cloudinary.v2.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+})
+
+// Function để upload từ buffer lên Cloudinary
+const uploadToCloudinary = (buffer: Buffer, folder: string): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.v2.uploader.upload_stream(
+      {
+        folder: `shopee-clone/${folder}`,
+      },
+      (error, result) => {
+        if (error) return reject(error)
+        resolve(result)
+      }
+    )
+
+    streamifier.createReadStream(buffer).pipe(uploadStream)
+  })
+}
+
+// Cập nhật handleImageProduct để không cần xử lý URL (vì Cloudinary đã trả về URL đầy đủ)
 export const handleImageProduct = (product) => {
-  if (product.image !== undefined && product.image !== '') {
+  // Nếu đường dẫn đã là URL đầy đủ (bắt đầu bằng http hoặc https), không cần xử lý
+  if (product.image && !product.image.startsWith('http')) {
     product.image = HOST + `/${ROUTE_IMAGE}/` + product.image
   }
-  if (product.images !== undefined && product.images.length !== 0) {
+
+  if (product.images && product.images.length !== 0) {
     product.images = product.images.map((image) => {
-      return image !== '' ? HOST + `/${ROUTE_IMAGE}/` + image : ''
+      if (image && !image.startsWith('http')) {
+        return image !== '' ? HOST + `/${ROUTE_IMAGE}/` + image : ''
+      }
+      return image
     })
   }
   return product
@@ -326,21 +358,59 @@ const searchProduct = async (req: Request, res: Response) => {
 }
 
 const uploadProductImage = async (req: Request, res: Response) => {
-  const path = await uploadFile(req, FOLDERS.PRODUCT)
-  const response = {
-    message: 'Upload ảnh thành công',
-    data: path,
+  try {
+    if (!req.file) {
+      throw new ErrorHandler(STATUS.BAD_REQUEST, 'Không tìm thấy file ảnh')
+    }
+
+    // Upload ảnh lên Cloudinary
+    const result = await uploadToCloudinary(req.file.buffer, FOLDERS.PRODUCT)
+
+    // Trả về secure URL từ Cloudinary
+    const response = {
+      message: 'Upload ảnh thành công',
+      data: result.secure_url,
+    }
+
+    return responseSuccess(res, response)
+  } catch (error) {
+    console.error('Error uploading image to Cloudinary:', error)
+    throw new ErrorHandler(STATUS.INTERNAL_SERVER_ERROR, 'Lỗi khi tải ảnh lên')
   }
-  return responseSuccess(res, response)
 }
 
 const uploadManyProductImages = async (req: Request, res: Response) => {
-  const paths = await uploadManyFile(req, FOLDERS.PRODUCT)
-  const response = {
-    message: 'Upload các ảnh thành công',
-    data: paths,
+  try {
+    if (!req.files || !(req.files as Express.Multer.File[]).length) {
+      throw new ErrorHandler(STATUS.BAD_REQUEST, 'Không tìm thấy file ảnh')
+    }
+
+    const files = req.files as Express.Multer.File[]
+
+    // Upload tất cả ảnh lên Cloudinary
+    const uploadPromises = files.map((file) =>
+      uploadToCloudinary(file.buffer, FOLDERS.PRODUCT)
+    )
+
+    // Đợi tất cả upload hoàn thành
+    const results = await Promise.all(uploadPromises)
+
+    // Lấy các secure URL
+    const secureUrls = results.map((result) => result.secure_url)
+
+    const response = {
+      message: 'Upload các ảnh thành công',
+      data: secureUrls,
+    }
+
+    return responseSuccess(res, response)
+  } catch (error) {
+    console.error('Error uploading multiple images to Cloudinary:', error)
+    throw new ErrorHandler(
+      STATUS.INTERNAL_SERVER_ERROR,
+      'Lỗi khi tải nhiều ảnh lên'
+    )
   }
-  return responseSuccess(res, response)
 }
 
 const ProductController = {
