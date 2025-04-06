@@ -56,19 +56,55 @@ export const handleImageProduct = (product) => {
 }
 
 const removeImageProduct = (image) => {
+  if (!image) return
+
+  // Kiểm tra xem image có phải URL web không
+  if (image.startsWith('http')) {
+    // Nếu là URL Cloudinary, lấy public_id để xóa
+    if (image.includes('cloudinary.com')) {
+      try {
+        // Trích xuất public_id từ URL Cloudinary
+        const urlParts = image.split('/')
+        const fileNameWithExtension = urlParts[urlParts.length - 1]
+        const publicId = `shopee-clone/${FOLDERS.PRODUCT}/${
+          fileNameWithExtension.split('.')[0]
+        }`
+
+        // Xóa ảnh trên Cloudinary (bất đồng bộ)
+        cloudinary.v2.uploader.destroy(publicId, (error) => {
+          if (error)
+            console.error('Error deleting image from Cloudinary:', error)
+        })
+      } catch (error) {
+        console.error('Error parsing Cloudinary URL:', error)
+      }
+    }
+    // Nếu là URL web khác, không làm gì cả
+    return
+  }
+  // Nếu là file local, xóa như cũ
   if (image !== undefined && image !== '') {
-    fs.unlink(`${FOLDER_UPLOAD}/${FOLDERS.PRODUCT}/${image}`, (err) => {
-      if (err) console.error(err)
-    })
+    try {
+      fs.unlink(`${FOLDER_UPLOAD}/${FOLDERS.PRODUCT}/${image}`, (err) => {
+        if (err) console.error('Error deleting local file:', err)
+      })
+    } catch (error) {
+      console.error('Error in removeImageProduct:', error)
+    }
   }
 }
 
+// Cập nhật hàm removeManyImageProduct với xử lý lỗi tốt hơn
 const removeManyImageProduct = (images: string[]) => {
-  if (images !== undefined && images.length > 0) {
-    images.forEach((image) => {
+  if (!images || !Array.isArray(images)) return
+
+  images.forEach((image) => {
+    try {
       removeImageProduct(image)
-    })
-  }
+    } catch (error) {
+      console.error('Error in removeManyImageProduct:', error)
+    }
+  })
 }
 
 const addProduct = async (req: Request, res: Response) => {
