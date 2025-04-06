@@ -12,6 +12,8 @@ import { omitBy } from 'lodash'
 import { ORDER, SORT_BY } from '../constants/product'
 import cloudinary from 'cloudinary'
 import streamifier from 'streamifier'
+import { SearchHistoryModel } from '../database/models/search.model'
+import { UserModel } from '../database/models/user.model'
 
 // Cấu hình Cloudinary
 cloudinary.v2.config({
@@ -163,8 +165,25 @@ const getProducts = async (req: Request, res: Response) => {
     price_max,
     price_min,
     name,
+    userId,
   } = req.query as {
     [key: string]: string | number
+  }
+  // Lưu lịch sử tìm kiếm nếu người dùng đã đăng nhập và có tìm kiếm theo tên
+  try {
+    if (name && userId) {
+      // Lưu lịch sử tìm kiếm không chặn luồng chính
+      console.log('Saving search history...')
+      SearchHistoryModel.create({
+        user: userId,
+        search: name.toString(),
+      }).catch((err) => {
+        console.error('Error saving search history:', err)
+      })
+    }
+  } catch (error) {
+    // Xử lý lỗi nhưng không dừng API - chỉ log lỗi
+    console.error('Error handling search history:', error)
   }
 
   page = Number(page)
@@ -267,6 +286,46 @@ const getMyProducts = async (req: Request, res: Response) => {
 
 const getProduct = async (req: Request, res: Response) => {
   let condition = { _id: req.params.product_id }
+  const { userId } = req.query
+  if (userId) {
+    try {
+      // Tìm user
+      const user = await UserModel.findById(userId)
+
+      if (user) {
+        const productId = req.params.product_id
+        const watchList = user.watchList || []
+
+        // Kiểm tra xem sản phẩm đã có trong watchList chưa
+        const existingIndex = watchList.findIndex(
+          (id) => id.toString() === productId
+        )
+
+        // Nếu sản phẩm đã tồn tại trong watchList, xóa nó
+        if (existingIndex !== -1) {
+          watchList.splice(existingIndex, 1)
+        }
+
+        // Thêm sản phẩm vào cuối mảng
+        watchList.push(new mongoose.Schema.Types.ObjectId(productId))
+
+        // Giới hạn kích thước watchList nếu cần (giả sử tối đa 20 sản phẩm)
+        while (watchList.length > 20) {
+          watchList.shift() // Xóa sản phẩm cũ nhất
+        }
+
+        // Cập nhật watchList cho user
+        await UserModel.findByIdAndUpdate(userId, { watchList })
+
+        console.log(
+          `Đã cập nhật watchList cho user ${userId} với sản phẩm ${productId}`
+        )
+      }
+    } catch (error) {
+      console.error('Lỗi khi cập nhật watchList:', error)
+      // Không throw error để đảm bảo API vẫn tiếp tục hoạt động
+    }
+  }
   const productDB: any = await ProductModel.findOneAndUpdate(
     condition,
     { $inc: { view: 1 } },
@@ -449,6 +508,67 @@ const uploadManyProductImages = async (req: Request, res: Response) => {
   }
 }
 
+// Thêm hàm mới vào product.controller.ts
+const getRecentlyViewedProducts = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.query
+
+    // Validate userId
+    if (!userId) {
+      throw new ErrorHandler(STATUS.BAD_REQUEST, 'Thiếu userId')
+    }
+
+    // Tìm user và lấy watchList
+    const user = await UserModel.findById(userId).select('watchList').lean()
+
+    if (!user) {
+      throw new ErrorHandler(STATUS.NOT_FOUND, 'Không tìm thấy người dùng')
+    }
+
+    // Nếu không có watchList hoặc watchList rỗng
+    if (!user.watchList || user.watchList.length === 0) {
+      return responseSuccess(res, {
+        message: 'Người dùng chưa xem sản phẩm nào',
+        data: [],
+      })
+    }
+
+    // Lấy thông tin sản phẩm từ watchList
+    // watchList đã được sắp xếp với sản phẩm mới xem nhất ở cuối mảng
+    // nên chúng ta sẽ đảo ngược trước khi truy vấn
+    const productIds = [...user.watchList].reverse()
+
+    // Lấy tất cả sản phẩm theo IDs
+    const products = await ProductModel.find({
+      _id: { $in: productIds },
+    })
+      .populate('category')
+      .select({ __v: 0 })
+      .lean()
+
+    // Sắp xếp sản phẩm theo thứ tự trong watchList (mới nhất đầu tiên)
+    // Tạo map để tìm kiếm nhanh
+    const productMap = {}
+    products.forEach((product) => {
+      productMap[product._id.toString()] = product
+    })
+
+    // Sắp xếp theo thứ tự của watchList (đã đảo ngược)
+    const sortedProducts = productIds
+      .map((id) => productMap[id.toString()])
+      .filter(Boolean) // Lọc bỏ các sản phẩm không tồn tại
+      .map((product) => handleImageProduct(product)) // Xử lý URL hình ảnh
+
+    return responseSuccess(res, {
+      message: 'Lấy các sản phẩm đã xem gần đây thành công',
+      data: sortedProducts,
+    })
+  } catch (error) {
+    console.error('Error getting recently viewed products:', error)
+    throw error
+  }
+}
+
 const ProductController = {
   addProduct,
   getAllProducts,
@@ -461,6 +581,7 @@ const ProductController = {
   uploadProductImage,
   uploadManyProductImages,
   getMyProducts,
+  getRecentlyViewedProducts,
 }
 
 export default ProductController

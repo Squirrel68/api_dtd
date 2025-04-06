@@ -23,6 +23,7 @@ export interface IUser extends Document {
   shop?: IShop
   createdAt: Date
   updatedAt: Date
+  watchList?: mongoose.Schema.Types.ObjectId[]
 }
 
 const UserSchema = new Schema(
@@ -35,6 +36,7 @@ const UserSchema = new Schema(
     phone: { type: String, maxlength: 20 },
     roles: { type: [String], required: true, default: [ROLE.ADMIN] },
     avatar: { type: String, maxlength: 1000 },
+    watchList: [{ type: mongoose.SchemaTypes.ObjectId, ref: 'products' }],
     shop: {
       name: { type: String, maxlength: 160 },
       description: { type: String, maxlength: 1000 },
