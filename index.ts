@@ -20,6 +20,18 @@ app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// Health check route
+app.get('/health', (req, res) => {
+  const healthcheck = {
+    status: 'ok',
+    timestamp: new Date(),
+    uptime: process.uptime(),
+    memory: process.memoryUsage(),
+  }
+
+  res.status(200).json(healthcheck)
+})
+
 const dirNameWithEnv = isProduction ? path.dirname(__dirname) : __dirname
 
 const handlerImage: any = Object.values(FOLDERS).reduce(
