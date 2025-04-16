@@ -13,7 +13,7 @@ const verifyAccessToken = async (
   res: Response,
   next: NextFunction
 ) => {
-  const access_token = req.headers.authorization?.replace('Bearer ', '')
+  const access_token = req.headers.authorization
   if (access_token) {
     try {
       const decoded = (await verifyToken(

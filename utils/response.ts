@@ -23,20 +23,37 @@ export const responseError = (res: Response, error: ErrorHandler | any) => {
     // Case just string
     if (typeof error.error === 'string') {
       const message = error.error
-      return res.status(status).send({ message })
+      return res.status(status).send({
+        statusCode: status,
+        error: {
+          message,
+        },
+      })
     }
     // Case error is object
     const errorObject = error.error
+    let errorMessage = ''
+    Object.keys(errorObject).forEach((key) => {
+      errorMessage += `${key}: ${errorObject[key]}; `
+    })
     return res.status(status).send({
-      message: 'Lỗi',
-      data: errorObject,
+      statusCode: status,
+      error: {
+        message: errorMessage,
+      },
     })
   }
-  return res
-    .status(STATUS.INTERNAL_SERVER_ERROR)
-    .send({ message: error.message })
+  return res.status(STATUS.INTERNAL_SERVER_ERROR).send({
+    statusCode: STATUS.INTERNAL_SERVER_ERROR,
+    error: {
+      message: 'BE internal Error',
+    },
+  })
 }
 
 export const responseSuccess = (res: Response, data: SuccessResponse) => {
-  return res.status(STATUS.OK).send(data)
+  return res.status(STATUS.OK).send({
+    statusCode: STATUS.OK,
+    data: data.data,
+  })
 }

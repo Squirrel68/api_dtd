@@ -38,14 +38,14 @@ const registerController = async (req: Request, res: Response) => {
     const response = {
       message: 'Đăng ký thành công',
       data: {
-        access_token: 'Bearer ' + access_token,
+        access_token: access_token,
         expires: config.EXPIRE_ACCESS_TOKEN,
         user: omit(userAdd, ['password']),
       },
     }
     return responseSuccess(res, response)
   }
-  throw new ErrorHandler(STATUS.UNPROCESSABLE_ENTITY, {
+  throw new ErrorHandler(STATUS.BAD_REQUEST, {
     email: 'Email đã tồn tại',
   })
 }
@@ -84,7 +84,7 @@ const loginController = async (req: Request, res: Response) => {
     const response = {
       message: 'Đăng nhập thành công',
       data: {
-        access_token: 'Bearer ' + access_token,
+        access_token: access_token,
         expires: config.EXPIRE_ACCESS_TOKEN,
         user: omit(userInDB, ['password']),
       },
@@ -94,7 +94,7 @@ const loginController = async (req: Request, res: Response) => {
 }
 
 const logoutController = async (req: Request, res: Response) => {
-  const access_token = req.headers.authorization?.replace('Bearer ', '')
+  const access_token = req.headers.authorization
   await AccessTokenModel.findOneAndDelete({
     token: access_token,
   }).exec()
