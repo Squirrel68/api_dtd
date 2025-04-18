@@ -25,4 +25,10 @@ commonAuthRouter.post(
   helpersMiddleware.entityValidator,
   wrapAsync(authController.registerController)
 )
+
+commonAuthRouter.post(
+  '/refresh-access-token',
+  authMiddleware.refreshTokenRules(),
+  wrapAsync(authController.refreshTokenController)
+)
 export default commonAuthRouter

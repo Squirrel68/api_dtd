@@ -1,13 +1,46 @@
 import { ErrorHandler, responseSuccess } from '../utils/response'
 import { hashValue, compareValue } from '../utils/crypt'
 import { config } from '../constants/config'
-import { signToken } from '../utils/jwt'
+import { signToken, verifyToken } from '../utils/jwt'
 import { Request, Response } from 'express'
 import { ROLE } from '../constants/role.enum'
 import { UserModel } from '../database/models/user.model'
-import { AccessTokenModel } from '../database/models/access-token.model'
 import { omit } from 'lodash'
 import { STATUS } from '../constants/status'
+import { RefreshTokenModel } from '../database/models/refresh-token.model'
+
+const generateRefreshToken = async (userId): Promise<string> => {
+  // Tạo refresh token
+  const refreshToken = (await signToken(
+    { id: userId, time: Date.now() }, // thêm timestamp để đảm bảo token unique
+    config.REFRESH_TOKEN_SECRET || 'shopee-refresh',
+    config.EXPIRE_REFRESH_TOKEN || 60 * 60 * 24 * 30 // 30 ngày
+  )) as string
+
+  // Lưu token vào DB
+  await RefreshTokenModel.create({
+    user_id: userId,
+    token: refreshToken,
+  })
+
+  return refreshToken
+}
+
+// Tạo access token (không lưu trong DB)
+const generateAccessToken = (user) => {
+  const payloadJWT = {
+    id: user._id,
+    email: user.email,
+    roles: user.roles,
+    created_at: new Date().toISOString(),
+  }
+
+  return signToken(
+    payloadJWT,
+    config.SECRET_KEY || 'shopee-clone',
+    config.EXPIRE_ACCESS_TOKEN || 60 * 60 // 1 giờ
+  )
+}
 
 const registerController = async (req: Request, res: Response) => {
   const body: Register = req.body
@@ -20,25 +53,16 @@ const registerController = async (req: Request, res: Response) => {
       password: hashedPassword,
     }
     const userAdd = await (await new UserModel(user).save()).toObject()
-    const payloadJWT: PayloadToken = {
-      email,
-      id: userAdd._id,
-      roles: [ROLE.USER],
-      created_at: new Date().toISOString(),
-    }
-    const access_token = await signToken(
-      payloadJWT,
-      config.SECRET_KEY,
-      config.EXPIRE_ACCESS_TOKEN
-    )
-    await new AccessTokenModel({
-      user_id: userAdd._id,
-      token: access_token,
-    }).save()
+    // Tạo access token (không lưu trong DB)
+    const access_token = await generateAccessToken(userAdd)
+
+    // Tạo refresh token và lưu vào DB
+    const refresh_token = await generateRefreshToken(userAdd._id)
     const response = {
       message: 'Đăng ký thành công',
       data: {
-        access_token: access_token,
+        access_token,
+        refresh_token,
         expires: config.EXPIRE_ACCESS_TOKEN,
         user: omit(userAdd, ['password']),
       },
@@ -65,26 +89,16 @@ const loginController = async (req: Request, res: Response) => {
         password: 'Email hoặc password không đúng',
       })
     }
-    let payloadJWT: PayloadToken = {
-      id: userInDB._id,
-      email: userInDB.email,
-      roles: userInDB.roles,
-      created_at: new Date().toISOString(),
-    }
-    const access_token = await signToken(
-      payloadJWT,
-      config.SECRET_KEY,
-      config.EXPIRE_ACCESS_TOKEN
-    )
+    // Tạo access token (không lưu trong DB)
+    const access_token = await generateAccessToken(userInDB)
 
-    await new AccessTokenModel({
-      user_id: userInDB._id,
-      token: access_token,
-    }).save()
+    // Tạo refresh token và lưu vào DB
+    const refresh_token = await generateRefreshToken(userInDB._id)
     const response = {
       message: 'Đăng nhập thành công',
       data: {
-        access_token: access_token,
+        access_token,
+        refresh_token,
         expires: config.EXPIRE_ACCESS_TOKEN,
         user: omit(userInDB, ['password']),
       },
@@ -92,12 +106,74 @@ const loginController = async (req: Request, res: Response) => {
     return responseSuccess(res, response)
   }
 }
+const refreshTokenController = async (req: Request, res: Response) => {
+  const { refresh_token } = req.body
 
+  if (!refresh_token) {
+    throw new ErrorHandler(
+      STATUS.BAD_REQUEST,
+      'Refresh token không được cung cấp'
+    )
+  }
+
+  try {
+    const payload: any = await verifyToken(
+      refresh_token,
+      config.REFRESH_TOKEN_SECRET || 'shopee-refresh'
+    )
+
+    // Tìm refresh token trong DB
+    const refreshTokenDoc = await RefreshTokenModel.findOne({
+      token: refresh_token,
+    })
+
+    if (!refreshTokenDoc) {
+      throw new ErrorHandler(STATUS.UNAUTHORIZED, 'Refresh token không hợp lệ')
+    }
+
+    // Lấy thông tin người dùng
+    const user = await UserModel.findById(payload.id).lean()
+    if (!user) {
+      throw new ErrorHandler(STATUS.UNAUTHORIZED, 'Người dùng không tồn tại')
+    }
+
+    // Tạo access token mới
+    const newAccessToken = await generateAccessToken(user)
+
+    // Tạo refresh token mới
+    const newRefreshToken = await generateRefreshToken(user._id)
+
+    // Xóa refresh token cũ
+    await RefreshTokenModel.deleteOne({ token: refresh_token })
+
+    return responseSuccess(res, {
+      message: 'Làm mới token thành công',
+      data: {
+        access_token: newAccessToken,
+        refresh_token: newRefreshToken,
+        expires_in: config.EXPIRE_ACCESS_TOKEN,
+        user: omit(user, ['password']),
+      },
+    })
+  } catch (error) {
+    if (
+      error.name === 'JsonWebTokenError' ||
+      error.name === 'TokenExpiredError'
+    ) {
+      throw new ErrorHandler(
+        STATUS.UNAUTHORIZED,
+        'Refresh token không hợp lệ hoặc đã hết hạn'
+      )
+    }
+    throw error
+  }
+}
 const logoutController = async (req: Request, res: Response) => {
-  const access_token = req.headers.authorization
-  await AccessTokenModel.findOneAndDelete({
-    token: access_token,
-  }).exec()
+  const { refresh_token } = req.body
+  if (refresh_token) {
+    await RefreshTokenModel.deleteOne({ token: refresh_token })
+  }
+
   return responseSuccess(res, { message: 'Đăng xuất thành công' })
 }
 
@@ -105,6 +181,7 @@ const authController = {
   registerController,
   loginController,
   logoutController,
+  refreshTokenController,
 }
 
 export default authController

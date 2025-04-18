@@ -4,7 +4,6 @@ import { NextFunction, Request, Response } from 'express'
 import { ROLE } from '../constants/role.enum'
 import { responseError, ErrorHandler } from '../utils/response'
 import { STATUS } from '../constants/status'
-import { AccessTokenModel } from '../database/models/access-token.model'
 import { body } from 'express-validator'
 import { UserModel } from '../database/models/user.model'
 
@@ -13,33 +12,44 @@ const verifyAccessToken = async (
   res: Response,
   next: NextFunction
 ) => {
-  const access_token = req.headers.authorization
-  if (access_token) {
+  const authorization = req.headers.authorization
+
+  if (authorization && authorization.startsWith('Bearer ')) {
+    const access_token = authorization.split(' ')[1]
     try {
       const decoded = (await verifyToken(
         access_token,
         config.SECRET_KEY
       )) as PayloadToken
       req.jwtDecoded = decoded
-      const accessTokenDB = await AccessTokenModel.findOne({
-        token: access_token,
-      }).exec()
-
-      if (accessTokenDB) {
-        return next()
+      return next()
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        return responseError(
+          res,
+          new ErrorHandler(STATUS.UNAUTHORIZED, 'Token đã hết hạn')
+        )
       }
       return responseError(
         res,
-        new ErrorHandler(STATUS.UNAUTHORIZED, 'Không tồn tại token')
+        new ErrorHandler(STATUS.UNAUTHORIZED, 'Token không hợp lệ')
       )
-    } catch (error) {
-      return responseError(res, error)
     }
   }
   return responseError(
     res,
     new ErrorHandler(STATUS.UNAUTHORIZED, 'Token không được gửi')
   )
+}
+
+const refreshTokenRules = () => {
+  return [
+    body('refresh_token')
+      .exists()
+      .withMessage('Refresh token không được để trống')
+      .isString()
+      .withMessage('Refresh token phải là chuỗi'),
+  ]
 }
 
 const verifyAdmin = async (req: Request, res: Response, next: NextFunction) => {
@@ -86,6 +96,7 @@ const authMiddleware = {
   verifyAdmin,
   registerRules,
   loginRules,
+  refreshTokenRules,
 }
 
 export default authMiddleware
