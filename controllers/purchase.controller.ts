@@ -205,9 +205,7 @@ export const getPurchases = async (req: Request, res: Response) => {
   let purchases: any = await PurchaseModel.find(condition)
     .populate({
       path: 'product',
-      populate: {
-        path: 'category',
-      },
+      populate: [{ path: 'category' }, { path: 'shop' }],
     })
     .sort({
       createdAt: -1,
