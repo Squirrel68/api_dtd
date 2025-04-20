@@ -1,7 +1,8 @@
 require('dotenv').config()
 export const config = {
   SECRET_KEY: process.env.SECRET_KEY_JWT || 'shopee-clone',
-  EXPIRE_ACCESS_TOKEN: Number(process.env.EXPIRE_ACCESS_TOKEN) || 60 * 60, // 1 hour
+  EXPIRE_ACCESS_TOKEN:
+    Number(process.env.EXPIRE_ACCESS_TOKEN) || 60 * 60 * 24 * 7, // 7 days
   REFRESH_TOKEN_SECRET:
     process.env.REFRESH_TOKEN_SECRET || 'shopee-clone-refresh',
   EXPIRE_REFRESH_TOKEN:
