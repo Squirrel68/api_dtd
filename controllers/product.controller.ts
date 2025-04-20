@@ -226,6 +226,9 @@ const getProducts = async (req: Request, res: Response) => {
         .populate({
           path: 'category',
         })
+        .populate({
+          path: 'shop',
+        })
         .sort({ [sort_by]: order === 'desc' ? -1 : 1 })
         .skip(page * limit - limit)
         .limit(limit)
@@ -332,6 +335,7 @@ const getProduct = async (req: Request, res: Response) => {
     { new: true }
   )
     .populate('category')
+    .populate('shop')
     .select({ __v: 0 })
     .lean()
   if (productDB) {
