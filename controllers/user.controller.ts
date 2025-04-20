@@ -4,6 +4,7 @@ import { responseSuccess, ErrorHandler } from '../utils/response'
 import { UserModel } from '../database/models/user.model'
 import { STATUS } from '../constants/status'
 import { omitBy } from 'lodash'
+import { recurlyService } from '../utils/RecurlyService'
 
 const addUser = async (req: Request, res: Response) => {
   const form: User = req.body
@@ -182,6 +183,56 @@ const deleteUser = async (req: Request, res: Response) => {
   }
 }
 
+/**
+ * Endpoint lấy thông tin thẻ thanh toán đã lưu
+ * GET /api/users/me/billing-info
+ */
+const getBillingInfo = async (req: Request, res: Response) => {
+  const userId = req.jwtDecoded.id
+
+  try {
+    // Lấy thông tin user
+    const user = await UserModel.findById(userId)
+    if (!user) {
+      throw new ErrorHandler(
+        STATUS.NOT_FOUND,
+        'Không tìm thấy thông tin người dùng'
+      )
+    }
+
+    // Nếu user không có recurly_account_id
+    if (!user.recurly_account_id) {
+      return responseSuccess(res, {
+        message: 'Chưa có phương thức thanh toán nào được lưu',
+        data: [],
+      })
+    }
+
+    // Lấy thông tin billing từ Recurly
+    const billingResult = await recurlyService.getAccountBillingInfo(
+      user.recurly_account_id
+    )
+
+    if (billingResult.success) {
+      return responseSuccess(res, {
+        message: 'Lấy thông tin thanh toán thành công',
+        data: billingResult.data,
+      })
+    } else {
+      throw new ErrorHandler(
+        STATUS.INTERNAL_SERVER_ERROR,
+        `Không thể lấy thông tin thanh toán: ${billingResult.error}`
+      )
+    }
+  } catch (error) {
+    console.error('Get billing info error:', error)
+    throw new ErrorHandler(
+      error.status || STATUS.INTERNAL_SERVER_ERROR,
+      error.message || 'Lỗi khi lấy thông tin thanh toán'
+    )
+  }
+}
+
 const userController = {
   addUser,
   getUsers,
@@ -190,6 +241,7 @@ const userController = {
   updateUser,
   deleteUser,
   updateMe,
+  getBillingInfo,
 }
 
 export default userController

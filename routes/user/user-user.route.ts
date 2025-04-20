@@ -19,3 +19,9 @@ userUserRouter.get(
   authMiddleware.verifyAccessToken,
   wrapAsync(userController.getDetailMySelf)
 )
+
+userUserRouter.get(
+  '/me/billing-info',
+  authMiddleware.verifyAccessToken,
+  wrapAsync(userController.getBillingInfo)
+)

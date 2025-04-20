@@ -24,6 +24,7 @@ export interface IUser extends Document {
   createdAt: Date
   updatedAt: Date
   watchList?: mongoose.Schema.Types.ObjectId[]
+  recurly_account_id?: string
 }
 
 const UserSchema = new Schema(
@@ -44,6 +45,7 @@ const UserSchema = new Schema(
       phone: { type: String, maxlength: 20 },
       avatar: { type: String, maxlength: 1000 },
     },
+    recurly_account_id: { type: String },
   },
   {
     timestamps: true,

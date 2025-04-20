@@ -8,6 +8,7 @@ export enum OrderStatus {
   DELIVERED = 'Delivered', // Đã giao hàng
   COMPLETED = 'Completed', // Hoàn thành
   CANCELED = 'Canceled', // Đã hủy
+  PAYMENT_FAILED = 'PaymentFailed', // Thanh toán thất bại
 }
 
 export interface IOrder extends Document {
@@ -26,6 +27,12 @@ export interface IOrder extends Document {
   paid_at?: Date // Thời điểm thanh toán
   delivered_at?: Date // Thời điểm giao hàng
   completed_at?: Date // Thời điểm hoàn thành
+
+  // Thêm các trường liên quan đến Recurly
+  recurly_transaction_id?: string // ID giao dịch từ Recurly
+  recurly_account_id?: string // ID tài khoản Recurly
+  payment_gateway_response?: string // Lưu trữ response từ payment gateway
+  payment_error?: string // Lưu trữ lỗi thanh toán nếu có
 }
 
 const OrderSchema = new Schema(
@@ -64,7 +71,14 @@ const OrderSchema = new Schema(
     },
     payment_method: {
       type: String,
-      enum: ['cod', 'bank_transfer', 'credit_card', 'momo', 'zalopay'],
+      enum: [
+        'cod',
+        'bank_transfer',
+        'credit_card',
+        'momo',
+        'zalopay',
+        'recurly',
+      ],
       required: true,
     },
     status: {
@@ -90,14 +104,24 @@ const OrderSchema = new Schema(
     completed_at: {
       type: Date,
     },
+
+    // Thêm các trường mới
+    recurly_transaction_id: {
+      type: String,
+    },
+    recurly_account_id: {
+      type: String,
+    },
+    payment_gateway_response: {
+      type: String,
+    },
+    payment_error: {
+      type: String,
+    },
   },
   {
     timestamps: true,
   }
 )
-
-// Thêm indexes để tối ưu truy vấn
-OrderSchema.index({ user: 1, createdAt: -1 })
-OrderSchema.index({ status: 1 })
 
 export const OrderModel = mongoose.model<IOrder>('orders', OrderSchema)

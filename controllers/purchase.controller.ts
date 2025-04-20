@@ -20,9 +20,7 @@ export const addToCart = async (req: Request, res: Response) => {
     const purchaseInDb: any = await PurchaseModel.findOne({
       user: req.jwtDecoded.id,
       status: STATUS_PURCHASE.IN_CART,
-      product: {
-        _id: product_id,
-      },
+      product: product_id,
     }).populate({
       path: 'product',
       populate: {
@@ -35,9 +33,7 @@ export const addToCart = async (req: Request, res: Response) => {
         {
           user: req.jwtDecoded.id,
           status: STATUS_PURCHASE.IN_CART,
-          product: {
-            _id: product_id,
-          },
+          product: product_id,
         },
         {
           buy_count: purchaseInDb.buy_count + buy_count,
@@ -85,9 +81,7 @@ export const updatePurchase = async (req: Request, res: Response) => {
   const purchaseInDb: any = await PurchaseModel.findOne({
     user: req.jwtDecoded.id,
     status: STATUS_PURCHASE.IN_CART,
-    product: {
-      _id: product_id,
-    },
+    product: product_id,
   })
     .populate({
       path: 'product',
@@ -107,9 +101,7 @@ export const updatePurchase = async (req: Request, res: Response) => {
       {
         user: req.jwtDecoded.id,
         status: STATUS_PURCHASE.IN_CART,
-        product: {
-          _id: product_id,
-        },
+        product: product_id,
       },
       {
         buy_count,
@@ -150,9 +142,7 @@ export const buyProducts = async (req: Request, res: Response) => {
           {
             user: req.jwtDecoded.id,
             status: STATUS_PURCHASE.IN_CART,
-            product: {
-              _id: item.product_id,
-            },
+            product: item.product_id,
           },
           {
             buy_count: item.buy_count,

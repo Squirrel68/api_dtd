@@ -1,5 +1,14 @@
-import mongoose, { Schema } from 'mongoose'
+import mongoose, { Schema, Document } from 'mongoose'
 import { STATUS_PURCHASE } from '../../constants/purchase'
+
+export interface IPurchase extends Document {
+  user: mongoose.Types.ObjectId
+  product: mongoose.Types.ObjectId
+  buy_count: number
+  price: number
+  price_before_discount: number
+  status: number
+}
 
 const PurchaseSchema = new Schema(
   {
@@ -14,4 +23,7 @@ const PurchaseSchema = new Schema(
     timestamps: true,
   }
 )
-export const PurchaseModel = mongoose.model('purchases', PurchaseSchema)
+export const PurchaseModel = mongoose.model<IPurchase>(
+  'purchases',
+  PurchaseSchema
+)
