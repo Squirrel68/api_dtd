@@ -169,7 +169,7 @@ const getProducts = async (req: Request, res: Response) => {
   } = req.query as {
     [key: string]: string | number
   }
-  // Lưu lịch sử tìm kiếm nếu người dùng đã đăng nhập và có tìm kiếm theo tên
+
   try {
     if (name && userId) {
       // Lưu lịch sử tìm kiếm không chặn luồng chính
@@ -573,6 +573,41 @@ const getRecentlyViewedProducts = async (req: Request, res: Response) => {
   }
 }
 
+const getSearchHistory = async (req: Request, res: Response) => {
+  const userId = req.params.user_id
+
+  try {
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      throw new ErrorHandler(STATUS.BAD_REQUEST, 'ID người dùng không hợp lệ')
+    }
+
+    // Fetch search history from database
+    const searchHistory = await SearchHistoryModel.find({ user: userId })
+      .populate('user', 'name email avatar') // Chỉ lấy một số thông tin cần thiết của user
+      .sort({ createdAt: -1 })
+      .lean()
+
+    // Return success response with search history
+    const response = {
+      message: 'Lấy lịch sử tìm kiếm thành công',
+      data: searchHistory,
+    }
+    return responseSuccess(res, response)
+  } catch (error) {
+    // Handle different types of errors
+    if (error.status) {
+      // For errors that already have status code, rethrow them
+      throw error
+    }
+
+    console.error('Error retrieving search history:', error)
+    throw new ErrorHandler(
+      STATUS.INTERNAL_SERVER_ERROR,
+      'Lỗi khi lấy lịch sử tìm kiếm'
+    )
+  }
+}
+
 const ProductController = {
   addProduct,
   getAllProducts,
@@ -586,6 +621,7 @@ const ProductController = {
   uploadManyProductImages,
   getMyProducts,
   getRecentlyViewedProducts,
+  getSearchHistory,
 }
 
 export default ProductController

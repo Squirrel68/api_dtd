@@ -30,4 +30,9 @@ commonProductRouter.get(
 )
 
 commonProductRouter.get('/search', wrapAsync(ProductController.searchProduct))
+commonProductRouter.get(
+  '/search-history/:user_id',
+  wrapAsync(ProductController.getSearchHistory)
+)
+
 export default commonProductRouter
