@@ -1,4 +1,26 @@
-Deploy to GCP
+### Run on Local
+
+Requirements: NodeJs, TypeScript
+If you don't have NodeJs installed, please install it from [NodeJs](https://nodejs.org/en/download/)
+If you don't have TypeScript installed, please install it globally using npm
+
+```bash
+npm install -g typescript
+```
+
+First time Clone the repo, run the following command to install all dependencies
+
+```bash
+npm install
+```
+
+From the second time, just run the following command to start the app
+
+```bash
+npm start
+```
+
+### Deploy to GCP
 
 Check health of the app
 
