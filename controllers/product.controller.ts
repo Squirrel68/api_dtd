@@ -68,9 +68,8 @@ const removeImageProduct = (image) => {
         // Trích xuất public_id từ URL Cloudinary
         const urlParts = image.split('/')
         const fileNameWithExtension = urlParts[urlParts.length - 1]
-        const publicId = `shopee-clone/${FOLDERS.PRODUCT}/${
-          fileNameWithExtension.split('.')[0]
-        }`
+        const publicId = `shopee-clone/${FOLDERS.PRODUCT}/${fileNameWithExtension.split('.')[0]
+          }`
 
         // Xóa ảnh trên Cloudinary (bất đồng bộ)
         cloudinary.v2.uploader.destroy(publicId, (error) => {
@@ -523,7 +522,7 @@ const getRecentlyViewedProducts = async (req: Request, res: Response) => {
     }
 
     // Tìm user và lấy watchList
-    const user = await UserModel.findById(userId).select('watchList').lean()
+    const user = await UserModel.findById(userId)
 
     if (!user) {
       throw new ErrorHandler(STATUS.NOT_FOUND, 'Không tìm thấy người dùng')
