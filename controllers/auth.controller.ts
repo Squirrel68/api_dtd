@@ -44,13 +44,14 @@ const generateAccessToken = (user) => {
 
 const registerController = async (req: Request, res: Response) => {
   const body: Register = req.body
-  const { email, password } = body
+  const { email, password, name } = body
   const userInDB = await UserModel.findOne({ email: email }).exec()
   if (!userInDB) {
     const hashedPassword = hashValue(password)
     const user = {
       email,
       password: hashedPassword,
+      name,
     }
     const userAdd = await (await new UserModel(user).save()).toObject()
     // Tạo access token (không lưu trong DB)
