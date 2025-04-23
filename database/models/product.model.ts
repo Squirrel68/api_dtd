@@ -12,6 +12,7 @@ const ProductSchema = new Schema(
     price_before_discount: { type: Number, default: 0 },
     quantity: { type: Number, default: 0 },
     sold: { type: Number, default: 0 },
+    monthlySold: { type: Number, default: 0 },
     view: { type: Number, default: 0 },
     shop: { type: Schema.Types.ObjectId, ref: 'users' },
   },

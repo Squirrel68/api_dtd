@@ -188,6 +188,7 @@ const processPayment = async (req: Request, res: Response) => {
           $inc: {
             quantity: -purchase.buy_count,
             sold: purchase.buy_count,
+            monthlySold: purchase.buy_count,
           },
         })
       }
