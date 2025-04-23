@@ -7,7 +7,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon --files index.ts",
     "build": "tsc --project ./",
-    "prod": "tsc --project ./ && node ./build/index.js production"
+    "prod": "tsc --project ./ && node ./build/index.js production",
+    "migrate:price": "ts-node scripts/migration-price-before-discount.ts",
+    "migrate:int-prices": "ts-node scripts/migration-convert-to-int.ts"
   },
   "keywords": [],
   "author": "",
