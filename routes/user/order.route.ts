@@ -19,18 +19,18 @@ userOrderRouter.post(
   wrapAsync(orderController.processPayment)
 )
 
-// // Lấy danh sách đơn hàng
-// userOrderRouter.get(
-//   '/',
-//   authMiddleware.verifyAccessToken,
-//   wrapAsync(orderController.getUserOrders)
-// )
+// Lấy danh sách đơn hàng
+userOrderRouter.get(
+  '/',
+  authMiddleware.verifyAccessToken,
+  wrapAsync(orderController.getAllOrders)
+)
 
-// // Lấy chi tiết đơn hàng
-// userOrderRouter.get(
-//   '/:order_id',
-//   authMiddleware.verifyAccessToken,
-//   wrapAsync(orderController.getOrderDetail)
-// )
+// Lấy chi tiết đơn hàng
+userOrderRouter.get(
+  '/:order_id',
+  authMiddleware.verifyAccessToken,
+  wrapAsync(orderController.getOrderDetail)
+)
 
 export default userOrderRouter

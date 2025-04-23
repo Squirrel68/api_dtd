@@ -238,11 +238,172 @@ const processPayment = async (req: Request, res: Response) => {
   }
 }
 
-// Các controller khác...
+/**
+ * Get all orders with pagination and filtering options
+ * GET /api/orders
+ * Query params:
+ * - page: number (default: 1)
+ * - limit: number (default: 10)
+ * - status: OrderStatus (optional)
+ * - from_date: Date (optional)
+ * - to_date: Date (optional)
+ */
+export const getAllOrders = async (req: Request, res: Response) => {
+  try {
+    const userId = req.jwtDecoded.id
+    const { page = 1, limit = 10, status, from_date, to_date } = req.query
+
+    // Build filter conditions
+    const filter: any = { user: userId }
+
+    // Add status filter if provided
+    if (status && Object.values(OrderStatus).includes(status as OrderStatus)) {
+      filter.status = status
+    }
+
+    // Add date range filter if provided
+    if (from_date || to_date) {
+      filter.createdAt = {}
+
+      if (from_date) {
+        const fromDate = new Date(from_date as string)
+        if (!isNaN(fromDate.getTime())) {
+          filter.createdAt.$gte = fromDate
+        }
+      }
+
+      if (to_date) {
+        const toDate = new Date(to_date as string)
+        if (!isNaN(toDate.getTime())) {
+          toDate.setHours(23, 59, 59, 999)
+          filter.createdAt.$lte = toDate
+        }
+      }
+    }
+
+    // Parse pagination params
+    const pageNumber = parseInt(page as string) || 1
+    const limitNumber = parseInt(limit as string) || 10
+    const skip = (pageNumber - 1) * limitNumber
+
+    // Get total count for pagination
+    const totalOrders = await OrderModel.countDocuments(filter)
+
+    // Get orders with related data
+    const orders = await OrderModel.find(filter)
+      .populate({
+        path: 'purchases',
+        populate: {
+          path: 'product',
+          select: 'name image price price_before_discount shop',
+          populate: {
+            path: 'shop',
+            select: 'name avatar',
+          },
+        },
+      })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limitNumber)
+      .lean()
+
+    return responseSuccess(res, {
+      message: 'Lấy danh sách đơn hàng thành công',
+      data: {
+        orders: orders,
+        pagination: {
+          total: totalOrders,
+          page: pageNumber,
+          limit: limitNumber,
+          pages: Math.ceil(totalOrders / limitNumber),
+        },
+      },
+    })
+  } catch (error) {
+    console.error('Error getting orders:', error)
+    if (error.status) {
+      throw error
+    }
+    throw new ErrorHandler(
+      STATUS.INTERNAL_SERVER_ERROR,
+      'Lỗi khi lấy danh sách đơn hàng'
+    )
+  }
+}
+
+/**
+ * Get detailed information about a specific order
+ * GET /api/orders/:order_id
+ */
+export const getOrderDetail = async (req: Request, res: Response) => {
+  try {
+    const userId = req.jwtDecoded.id
+    const { order_id } = req.params
+
+    // Validate order_id
+    if (!mongoose.Types.ObjectId.isValid(order_id)) {
+      throw new ErrorHandler(STATUS.BAD_REQUEST, 'ID đơn hàng không hợp lệ')
+    }
+
+    // Find order and populate related data
+    const order = await OrderModel.findOne({
+      _id: order_id,
+      user: userId,
+    })
+      .populate({
+        path: 'purchases',
+        populate: {
+          path: 'product',
+          populate: [
+            {
+              path: 'category',
+              select: 'name _id',
+            },
+            {
+              path: 'shop',
+              select: 'name avatar address phone',
+            },
+          ],
+        },
+      })
+      .lean()
+
+    if (!order) {
+      throw new ErrorHandler(STATUS.NOT_FOUND, 'Không tìm thấy đơn hàng')
+    }
+
+    // Calculate summary information
+    const summary = {
+      total_items: order.purchases?.length || 0,
+      total_amount: order.total_amount,
+      shipping_fee: order.shipping_fee,
+      grand_total: order.total_amount + order.shipping_fee,
+    }
+
+    return responseSuccess(res, {
+      message: 'Lấy chi tiết đơn hàng thành công',
+      data: {
+        order,
+        summary,
+      },
+    })
+  } catch (error) {
+    console.error('Error getting order detail:', error)
+    if (error.status) {
+      throw error
+    }
+    throw new ErrorHandler(
+      STATUS.INTERNAL_SERVER_ERROR,
+      'Lỗi khi lấy chi tiết đơn hàng'
+    )
+  }
+}
 
 const orderController = {
   createOrder,
   processPayment,
+  getAllOrders,
+  getOrderDetail,
 }
 
 export default orderController
