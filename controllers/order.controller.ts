@@ -296,10 +296,7 @@ export const getAllOrders = async (req: Request, res: Response) => {
         populate: {
           path: 'product',
           select: 'name image price price_before_discount shop',
-          populate: {
-            path: 'shop',
-            select: 'name avatar',
-          },
+          populate: [{ path: 'category' }, { path: 'shop' }],
         },
       })
       .sort({ createdAt: -1 })
@@ -354,16 +351,7 @@ export const getOrderDetail = async (req: Request, res: Response) => {
         path: 'purchases',
         populate: {
           path: 'product',
-          populate: [
-            {
-              path: 'category',
-              select: 'name _id',
-            },
-            {
-              path: 'shop',
-              select: 'name avatar address phone',
-            },
-          ],
+          populate: [{ path: 'category' }, { path: 'shop' }],
         },
       })
       .lean()
