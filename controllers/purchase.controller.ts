@@ -23,9 +23,7 @@ export const addToCart = async (req: Request, res: Response) => {
       product: product_id,
     }).populate({
       path: 'product',
-      populate: {
-        path: 'category',
-      },
+      populate: [{ path: 'category' }, { path: 'shop' }],
     })
     let data
     if (purchaseInDb) {
@@ -44,9 +42,7 @@ export const addToCart = async (req: Request, res: Response) => {
       )
         .populate({
           path: 'product',
-          populate: {
-            path: 'category',
-          },
+          populate: [{ path: 'category' }, { path: 'shop' }],
         })
         .lean()
     } else {
@@ -61,9 +57,7 @@ export const addToCart = async (req: Request, res: Response) => {
       const addedPurchase = await new PurchaseModel(purchase).save()
       data = await PurchaseModel.findById(addedPurchase._id).populate({
         path: 'product',
-        populate: {
-          path: 'category',
-        },
+        populate: [{ path: 'category' }, { path: 'shop' }],
       })
     }
     const response = {
@@ -85,9 +79,7 @@ export const updatePurchase = async (req: Request, res: Response) => {
   })
     .populate({
       path: 'product',
-      populate: {
-        path: 'category',
-      },
+      populate: [{ path: 'category' }, { path: 'shop' }],
     })
     .lean()
   if (purchaseInDb) {
@@ -112,9 +104,7 @@ export const updatePurchase = async (req: Request, res: Response) => {
     )
       .populate({
         path: 'product',
-        populate: {
-          path: 'category',
-        },
+        populate: [{ path: 'category' }, { path: 'shop' }],
       })
       .lean()
     const response = {
@@ -154,9 +144,7 @@ export const buyProducts = async (req: Request, res: Response) => {
         )
           .populate({
             path: 'product',
-            populate: {
-              path: 'category',
-            },
+            populate: [{ path: 'category' }, { path: 'shop' }],
           })
           .lean()
         if (!data) {
@@ -171,9 +159,7 @@ export const buyProducts = async (req: Request, res: Response) => {
           const addedPurchase = await new PurchaseModel(purchase).save()
           data = await PurchaseModel.findById(addedPurchase._id).populate({
             path: 'product',
-            populate: {
-              path: 'category',
-            },
+            populate: [{ path: 'category' }, { path: 'shop' }],
           })
         }
         purchases.push(data)
