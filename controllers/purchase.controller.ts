@@ -208,6 +208,30 @@ export const getPurchases = async (req: Request, res: Response) => {
   return responseSuccess(res, response)
 }
 
+export const getPurchaseById = async (req: Request, res: Response) => {
+  const { purchase_id } = req.params
+  const user_id = req.jwtDecoded.id
+  const purchase: any = await PurchaseModel.findOne({
+    user: user_id,
+    _id: purchase_id,
+  })
+    .populate({
+      path: 'product',
+      populate: [{ path: 'category' }, { path: 'shop' }],
+    })
+    .lean()
+
+  if (purchase) {
+    purchase.product = handleImageProduct(cloneDeep(purchase.product))
+    const response = {
+      message: 'Lấy đơn mua thành công',
+      data: purchase,
+    }
+    return responseSuccess(res, response)
+  }
+  throw new ErrorHandler(STATUS.NOT_FOUND, 'Không tìm thấy đơn hàng')
+}
+
 export const deletePurchases = async (req: Request, res: Response) => {
   const purchase_ids = req.body
   const user_id = req.jwtDecoded.id
