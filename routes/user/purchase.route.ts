@@ -46,7 +46,7 @@ userPurchaseRouter.get(
 )
 
 userPurchaseRouter.get(
-  '/:purchaseId',
+  '/:purchase_id',
   authMiddleware.verifyAccessToken,
   wrapAsync(purchaseController.getPurchaseById)
 )
