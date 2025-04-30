@@ -109,14 +109,12 @@ adminProductRouter.delete(
 adminProductRouter.post(
   '/upload-image',
   authMiddleware.verifyAccessToken,
-  authMiddleware.verifyAdmin,
   upload.single('image'),
   wrapAsync(ProductController.uploadProductImage)
 )
 adminProductRouter.post(
   '/upload-images',
   authMiddleware.verifyAccessToken,
-  authMiddleware.verifyAdmin,
   upload.array('images', 10), // Giới hạn tối đa 10 file
   wrapAsync(ProductController.uploadManyProductImages)
 )
