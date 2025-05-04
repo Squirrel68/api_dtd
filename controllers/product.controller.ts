@@ -390,6 +390,8 @@ const updateProduct = async (req: Request, res: Response) => {
     }
   )
     .select({ __v: 0 })
+    .populate('category')
+    .populate('shop')
     .lean()
   if (productDB) {
     const response = {
