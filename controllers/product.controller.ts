@@ -68,8 +68,9 @@ const removeImageProduct = (image) => {
         // Trích xuất public_id từ URL Cloudinary
         const urlParts = image.split('/')
         const fileNameWithExtension = urlParts[urlParts.length - 1]
-        const publicId = `shopee-clone/${FOLDERS.PRODUCT}/${fileNameWithExtension.split('.')[0]
-          }`
+        const publicId = `shopee-clone/${FOLDERS.PRODUCT}/${
+          fileNameWithExtension.split('.')[0]
+        }`
 
         // Xóa ảnh trên Cloudinary (bất đồng bộ)
         cloudinary.v2.uploader.destroy(publicId, (error) => {
@@ -274,7 +275,7 @@ const getMyProducts = async (req: Request, res: Response) => {
   const userId = req.jwtDecoded.id
   const condition = { shop: userId }
   let products: any = await ProductModel.find(condition)
-    .populate({ path: 'category' })
+    .populate({ path: 'category' }, { path: 'shop' })
     .sort({ createdAt: -1 })
     .select({ __v: 0, description: 0 })
     .lean()
