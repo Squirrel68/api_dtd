@@ -4,6 +4,8 @@ import { UserModel } from '../database/models/user.model'
 import { STATUS } from '../constants/status'
 import { omitBy } from 'lodash'
 import { ROLE } from '../constants/role.enum'
+import { ProductModel } from '../database/models/product.model'
+import { OrderModel } from '../database/models/order.model'
 
 const createShop = async (req: Request, res: Response) => {
   const { name, description, address, phone, avatar } = req.body
@@ -70,9 +72,29 @@ const getShop = async (req: Request, res: Response) => {
     throw new ErrorHandler(STATUS.BAD_REQUEST, 'Người dùng chưa có cửa hàng')
   }
 
+  const totalProduct = await ProductModel.countDocuments({ shop: userId })
+  const shopProducts = await ProductModel.find({ shop: userId })
+    .select('_id')
+    .lean()
+  const shopProductIds = shopProducts.map((product) => product._id)
+
+  const totalOrder = await OrderModel.countDocuments({
+    purchases: {
+      $elemMatch: {
+        product: { $in: shopProductIds },
+      },
+    },
+  })
+
+  const shopData = {
+    ...userDB.shop,
+    totalProduct,
+    totalOrder,
+  }
+
   const response = {
     message: 'Lấy thông tin cửa hàng thành công',
-    data: userDB.shop,
+    data: shopData,
   }
 
   return responseSuccess(res, response)
