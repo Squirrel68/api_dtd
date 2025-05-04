@@ -141,14 +141,15 @@ const addProduct = async (req: Request, res: Response) => {
     shop: userId,
   }
   const productAdd = await new ProductModel(product).save()
+  // Then fetch it with populated fields
+  const populatedProduct = await ProductModel.findById(productAdd._id)
+    .populate('category')
+    .populate('shop')
+    .lean()
+
   const response = {
     message: 'Tạo sản phẩm thành công',
-    data: productAdd.toObject({
-      transform: (doc, ret, option) => {
-        delete ret.__v
-        return handleImageProduct(ret)
-      },
-    }),
+    data: handleImageProduct(populatedProduct),
   }
   return responseSuccess(res, response)
 }
