@@ -275,7 +275,8 @@ const getMyProducts = async (req: Request, res: Response) => {
   const userId = req.jwtDecoded.id
   const condition = { shop: userId }
   let products: any = await ProductModel.find(condition)
-    .populate({ path: 'category' }, { path: 'shop' })
+    .populate('category')
+    .populate('shop')
     .sort({ createdAt: -1 })
     .select({ __v: 0, description: 0 })
     .lean()
