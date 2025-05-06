@@ -42,11 +42,11 @@ const uploadToCloudinary = (buffer: Buffer, folder: string): Promise<any> => {
 // Cập nhật handleImageProduct để không cần xử lý URL (vì Cloudinary đã trả về URL đầy đủ)
 export const handleImageProduct = (product) => {
   // Nếu đường dẫn đã là URL đầy đủ (bắt đầu bằng http hoặc https), không cần xử lý
-  if (product.image && !product.image.startsWith('http')) {
+  if (product?.image && !product?.image.startsWith('http')) {
     product.image = HOST + `/${ROUTE_IMAGE}/` + product.image
   }
 
-  if (product.images && product.images.length !== 0) {
+  if (product?.images && product?.images.length !== 0) {
     product.images = product.images.map((image) => {
       if (image && !image.startsWith('http')) {
         return image !== '' ? HOST + `/${ROUTE_IMAGE}/` + image : ''
