@@ -553,6 +553,7 @@ const getRecentlyViewedProducts = async (req: Request, res: Response) => {
       _id: { $in: productIds },
     })
       .populate('category')
+      .populate('shop')
       .select({ __v: 0 })
       .lean()
 
