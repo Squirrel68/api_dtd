@@ -9,7 +9,8 @@
     "build": "tsc --project ./",
     "prod": "tsc --project ./ && node ./build/index.js production",
     "migrate:price": "ts-node scripts/migration-price-before-discount.ts",
-    "migrate:int-prices": "ts-node scripts/migration-convert-to-int.ts"
+    "migrate:int-prices": "ts-node scripts/migration-convert-to-int.ts",
+    "migrate:ratings": "ts-node scripts/migration-random-ratings.ts"
   },
   "keywords": [],
   "author": "",
