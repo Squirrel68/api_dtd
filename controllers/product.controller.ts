@@ -292,7 +292,7 @@ const getMyProducts = async (req: Request, res: Response) => {
 
 const getProduct = async (req: Request, res: Response) => {
   let condition = { _id: req.params.product_id }
-  const { userId } = req.query
+  const userId = req.jwtDecoded.id
   if (userId) {
     try {
       // Tìm user
