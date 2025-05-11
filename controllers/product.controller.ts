@@ -14,7 +14,6 @@ import cloudinary from 'cloudinary'
 import streamifier from 'streamifier'
 import { SearchHistoryModel } from '../database/models/search.model'
 import { UserModel } from '../database/models/user.model'
-
 // Cấu hình Cloudinary
 cloudinary.v2.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -293,6 +292,8 @@ const getMyProducts = async (req: Request, res: Response) => {
 const getProduct = async (req: Request, res: Response) => {
   let condition = { _id: req.params.product_id }
   const userId = req.jwtDecoded.id
+
+  console.log('userId: ', userId)
   if (userId) {
     try {
       // Tìm user
@@ -313,9 +314,8 @@ const getProduct = async (req: Request, res: Response) => {
         }
 
         // Thêm sản phẩm vào cuối mảng
-        watchList.push(new mongoose.Schema.Types.ObjectId(productId))
-
-        // Giới hạn kích thước watchList nếu cần (giả sử tối đa 20 sản phẩm)
+        // Thêm sản phẩm vào cuối mảng
+        watchList.push(new mongoose.Types.ObjectId(productId) as any)
         while (watchList.length > 20) {
           watchList.shift() // Xóa sản phẩm cũ nhất
         }
