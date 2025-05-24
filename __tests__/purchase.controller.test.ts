@@ -517,4 +517,572 @@ describe('Purchase Controller', () => {
       })
     })
   })
+
+  describe('addToCart - Enhanced Tests', () => {
+    test('should throw error when product_id is not provided', async () => {
+      // Arrange
+      req.body = {
+        buy_count: 2,
+        // Missing product_id
+      }
+
+      // Act & Assert
+      await expect(
+        purchaseController.addToCart(req as Request, res as Response)
+      ).rejects.toEqual(
+        expect.objectContaining({
+          name: 'ErrorHandler',
+        })
+      )
+    })
+
+    test('should throw error when buy_count is not provided', async () => {
+      // Arrange
+      req.body = {
+        product_id: 'product123',
+        // Missing buy_count
+      }
+
+      // Mock product model findById
+      const mockProduct = {
+        _id: 'product123',
+        name: 'Test Product',
+        price: 1000,
+        price_before_discount: 1200,
+        quantity: 10,
+      }
+
+      ;(ProductModel.findById as jest.Mock).mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(mockProduct),
+      }))
+
+      // Act & Assert
+      await expect(
+        purchaseController.addToCart(req as Request, res as Response)
+      ).rejects.toEqual(
+        expect.objectContaining({
+          name: 'ErrorHandler',
+        })
+      )
+    })
+
+    test('should throw error when buy_count is zero or negative', async () => {
+      // Arrange
+      req.body = {
+        product_id: 'product123',
+        buy_count: 0,
+      }
+
+      // Mock product model findById
+      const mockProduct = {
+        _id: 'product123',
+        name: 'Test Product',
+        price: 1000,
+        price_before_discount: 1200,
+        quantity: 10,
+      }
+
+      ;(ProductModel.findById as jest.Mock).mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(mockProduct),
+      }))
+
+      // Act & Assert
+      await expect(
+        purchaseController.addToCart(req as Request, res as Response)
+      ).rejects.toEqual(
+        expect.objectContaining({
+          status: expect.any(Number),
+          message: expect.any(String),
+          name: 'ErrorHandler',
+        })
+      )
+    })
+
+    test('should handle adding product with existing product in cart at max quantity', async () => {
+      // Arrange
+      req.body = {
+        product_id: 'product123',
+        buy_count: 1,
+      }
+
+      // Mock product model findById
+      const mockProduct = {
+        _id: 'product123',
+        name: 'Test Product',
+        price: 1000,
+        price_before_discount: 1200,
+        quantity: 10,
+      }
+
+      // Mock finding existing purchase with quantity = 9
+      const mockExistingPurchase = {
+        _id: 'purchase123',
+        product: 'product123',
+        buy_count: 9,
+        price: 1000,
+        price_before_discount: 1200,
+        status: STATUS_PURCHASE.IN_CART,
+      }
+
+      // Mock updated purchase with quantity = 10
+      const mockUpdatedPurchase = {
+        ...mockExistingPurchase,
+        buy_count: 10,
+        product: mockProduct,
+      }
+
+      ;(ProductModel.findById as jest.Mock).mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(mockProduct),
+      }))
+      ;(PurchaseModel.findOne as jest.Mock).mockImplementation(() => ({
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockExistingPurchase),
+      }))
+      ;(PurchaseModel.findOneAndUpdate as jest.Mock).mockImplementation(() => ({
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockUpdatedPurchase),
+      }))
+
+      // Act
+      await purchaseController.addToCart(req as Request, res as Response)
+
+      // Assert
+      expect(PurchaseModel.findOneAndUpdate).toHaveBeenCalledWith(
+        {
+          user: 'user123',
+          status: STATUS_PURCHASE.IN_CART,
+          product: 'product123',
+        },
+        {
+          buy_count: 10, // 9 + 1
+        },
+        {
+          new: true,
+        }
+      )
+
+      expect(responseSuccess).toHaveBeenCalledWith(res, {
+        message: 'Thêm sản phẩm vào giỏ hàng thành công',
+        data: mockUpdatedPurchase,
+      })
+    })
+
+    test('should throw error when trying to add product with unavailable quantity', async () => {
+      // Arrange
+      req.body = {
+        product_id: 'product123',
+        buy_count: 2,
+      }
+
+      // Mock product with quantity 0
+      const mockProduct = {
+        _id: 'product123',
+        name: 'Test Product',
+        price: 1000,
+        price_before_discount: 1200,
+        quantity: 0, // Product is out of stock
+      }
+
+      ;(ProductModel.findById as jest.Mock).mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(mockProduct),
+      }))
+
+      // Act & Assert
+      await expect(
+        purchaseController.addToCart(req as Request, res as Response)
+      ).rejects.toEqual({
+        status: STATUS.NOT_ACCEPTABLE,
+        message: 'Số lượng vượt quá số lượng sản phẩm',
+        name: 'ErrorHandler',
+      })
+    })
+  })
+
+  describe('updatePurchase - Enhanced Tests', () => {
+    test('should update purchase with minimum quantity', async () => {
+      // Arrange
+      req.body = {
+        product_id: 'product123',
+        buy_count: 1, // Minimum quantity
+      }
+
+      // Mock finding purchase
+      const mockPurchase = {
+        _id: 'purchase123',
+        product: {
+          _id: 'product123',
+          quantity: 10,
+          name: 'Test Product',
+          category: { _id: 'category1', name: 'Electronics' },
+          shop: { _id: 'shop1', name: 'Test Shop' },
+        },
+        buy_count: 5,
+      }
+
+      const mockUpdatedPurchase = {
+        ...mockPurchase,
+        buy_count: 1,
+      }
+
+      ;(PurchaseModel.findOne as jest.Mock).mockImplementation(() => ({
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockPurchase),
+      }))
+      ;(PurchaseModel.findOneAndUpdate as jest.Mock).mockImplementation(() => ({
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockUpdatedPurchase),
+      }))
+
+      // Act
+      await purchaseController.updatePurchase(req as Request, res as Response)
+
+      // Assert
+      expect(PurchaseModel.findOneAndUpdate).toHaveBeenCalledWith(
+        {
+          user: 'user123',
+          status: STATUS_PURCHASE.IN_CART,
+          product: 'product123',
+        },
+        {
+          buy_count: 1,
+        },
+        {
+          new: true,
+        }
+      )
+
+      expect(responseSuccess).toHaveBeenCalledWith(res, {
+        message: 'Cập nhật đơn thành công',
+        data: mockUpdatedPurchase,
+      })
+    })
+
+    test('should update purchase to maximum available quantity', async () => {
+      // Arrange
+      req.body = {
+        product_id: 'product123',
+        buy_count: 10, // Maximum quantity
+      }
+
+      // Mock finding purchase
+      const mockPurchase = {
+        _id: 'purchase123',
+        product: {
+          _id: 'product123',
+          quantity: 10,
+          name: 'Test Product',
+          category: { _id: 'category1', name: 'Electronics' },
+          shop: { _id: 'shop1', name: 'Test Shop' },
+        },
+        buy_count: 5,
+      }
+
+      const mockUpdatedPurchase = {
+        ...mockPurchase,
+        buy_count: 10,
+      }
+
+      ;(PurchaseModel.findOne as jest.Mock).mockImplementation(() => ({
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockPurchase),
+      }))
+      ;(PurchaseModel.findOneAndUpdate as jest.Mock).mockImplementation(() => ({
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockUpdatedPurchase),
+      }))
+
+      // Act
+      await purchaseController.updatePurchase(req as Request, res as Response)
+
+      // Assert
+      expect(PurchaseModel.findOneAndUpdate).toHaveBeenCalledWith(
+        {
+          user: 'user123',
+          status: STATUS_PURCHASE.IN_CART,
+          product: 'product123',
+        },
+        {
+          buy_count: 10,
+        },
+        {
+          new: true,
+        }
+      )
+
+      expect(responseSuccess).toHaveBeenCalledWith(res, {
+        message: 'Cập nhật đơn thành công',
+        data: mockUpdatedPurchase,
+      })
+    })
+  })
+
+  describe('getPurchases - Enhanced Tests', () => {
+    test('should return empty array when no purchases found', async () => {
+      // Arrange
+      req.query = { status: '1' }
+      req.jwtDecoded = { id: 'user123' }
+
+      // Mock empty purchases array
+      const emptyPurchases = []
+
+      ;(PurchaseModel.find as jest.Mock).mockImplementation(() => ({
+        populate: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(emptyPurchases),
+      }))
+
+      // Act
+      await purchaseController.getPurchases(req as Request, res as Response)
+
+      // Assert
+      expect(PurchaseModel.find).toHaveBeenCalledWith({
+        user: 'user123',
+        status: '1',
+      })
+      expect(responseSuccess).toHaveBeenCalledWith(res, {
+        message: 'Lấy đơn mua thành công',
+        data: [],
+      })
+    })
+
+    test('should handle various purchase status filters correctly', async () => {
+      // Arrange - Testing with status 2 (PROCESSING)
+      req.query = { status: '2' }
+      req.jwtDecoded = { id: 'user123' }
+
+      const mockPurchases = [
+        {
+          _id: 'purchase1',
+          status: STATUS_PURCHASE.IN_CART,
+          product: { _id: 'product1', name: 'Product 1' },
+        },
+      ]
+
+      ;(PurchaseModel.find as jest.Mock).mockImplementation(() => ({
+        populate: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockPurchases),
+      }))
+
+      // Act
+      await purchaseController.getPurchases(req as Request, res as Response)
+
+      // Assert
+      expect(PurchaseModel.find).toHaveBeenCalledWith({
+        user: 'user123',
+        status: '2',
+      })
+
+      // Clear mock and test another status
+      jest.clearAllMocks()
+      req.query = { status: '3' } // DELIVERED
+
+      // Act again
+      await purchaseController.getPurchases(req as Request, res as Response)
+
+      // Assert again
+      expect(PurchaseModel.find).toHaveBeenCalledWith({
+        user: 'user123',
+        status: '3',
+      })
+    })
+
+    test('should exclude items with IN_CART status when fetching all purchases', async () => {
+      // Arrange
+      req.query = { status: STATUS_PURCHASE.ALL.toString() }
+      req.jwtDecoded = { id: 'user123' }
+
+      const mockPurchases = [
+        {
+          _id: 'purchase1',
+          status: STATUS_PURCHASE.WAIT_FOR_CONFIRMATION,
+          product: { _id: 'product1', name: 'Product 1' },
+        },
+        {
+          _id: 'purchase2',
+          status: STATUS_PURCHASE.IN_CART,
+          product: { _id: 'product2', name: 'Product 2' },
+        },
+      ]
+
+      ;(PurchaseModel.find as jest.Mock).mockImplementation(() => ({
+        populate: jest.fn().mockReturnThis(),
+        sort: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockPurchases),
+      }))
+
+      // Act
+      await purchaseController.getPurchases(req as Request, res as Response)
+
+      // Assert
+      expect(PurchaseModel.find).toHaveBeenCalledWith({
+        user: 'user123',
+        status: {
+          $ne: STATUS_PURCHASE.IN_CART,
+        },
+      })
+    })
+  })
+
+  describe('getPurchaseById - Enhanced Tests', () => {
+    test('should handle invalid purchase ID format', async () => {
+      // Arrange
+      req.params = { purchase_id: 'invalid-id' }
+      req.jwtDecoded = { id: 'user123' }
+
+      // Mock mongoose error for invalid ID
+      ;(PurchaseModel.findOne as jest.Mock).mockImplementation(() => {
+        throw new Error('Invalid ID format')
+      })
+
+      // Act & Assert
+      await expect(
+        purchaseController.getPurchaseById(req as Request, res as Response)
+      ).rejects.toThrow('Invalid ID format')
+    })
+
+    test('should return purchase with populated product data', async () => {
+      // Arrange
+      req.params = { purchase_id: 'purchase123' }
+      req.jwtDecoded = { id: 'user123' }
+
+      const mockPurchase = {
+        _id: 'purchase123',
+        user: 'user123',
+        product: {
+          _id: 'product123',
+          name: 'Test Product',
+          price: 1000,
+          images: ['image1.jpg'],
+          category: { _id: 'category1', name: 'Electronics' },
+          shop: { _id: 'shop1', name: 'Test Shop' },
+        },
+        buy_count: 2,
+        price: 1000,
+        status: STATUS_PURCHASE.WAIT_FOR_CONFIRMATION,
+      }
+
+      // Mock image handling
+      const processedProduct = {
+        ...mockPurchase.product,
+        image: 'processed_image1.jpg',
+      }
+
+      ;(PurchaseModel.findOne as jest.Mock).mockImplementation(() => ({
+        populate: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(mockPurchase),
+      }))
+      ;(productController.handleImageProduct as jest.Mock).mockReturnValue(
+        processedProduct
+      )
+
+      // Act
+      await purchaseController.getPurchaseById(req as Request, res as Response)
+
+      // Assert
+      expect(PurchaseModel.findOne).toHaveBeenCalledWith({
+        user: 'user123',
+        _id: 'purchase123',
+      })
+      expect(productController.handleImageProduct).toHaveBeenCalledWith(
+        mockPurchase.product
+      )
+      expect(responseSuccess).toHaveBeenCalledWith(res, {
+        message: 'Lấy đơn mua thành công',
+        data: {
+          ...mockPurchase,
+          product: processedProduct,
+        },
+      })
+    })
+  })
+
+  describe('deletePurchases - Enhanced Tests', () => {
+    test('should handle deletion with empty purchase IDs array', async () => {
+      // Arrange
+      req.body = [] // Empty array of IDs
+      req.jwtDecoded = { id: 'user123' }
+
+      const mockDeletedData = {
+        deletedCount: 0,
+      }
+
+      ;(PurchaseModel.deleteMany as jest.Mock).mockResolvedValue(
+        mockDeletedData
+      )
+
+      // Act
+      await purchaseController.deletePurchases(req as Request, res as Response)
+
+      // Assert
+      expect(PurchaseModel.deleteMany).toHaveBeenCalledWith({
+        user: 'user123',
+        status: STATUS_PURCHASE.IN_CART,
+        _id: { $in: [] },
+      })
+      expect(responseSuccess).toHaveBeenCalledWith(res, {
+        message: 'Xoá 0 đơn thành công',
+        data: { deleted_count: 0 },
+      })
+    })
+
+    test('should handle deletion with non-array input', async () => {
+      // Arrange - simulating incorrect client input (single string instead of array)
+      req.body = 'purchase123'
+      req.jwtDecoded = { id: 'user123' }
+
+      // Mock deleteMany
+      ;(PurchaseModel.deleteMany as jest.Mock).mockImplementation(() => {
+        throw new Error('Purchase IDs must be an array')
+      })
+
+      // Act & Assert
+      await expect(
+        purchaseController.deletePurchases(req as Request, res as Response)
+      ).rejects.toThrow('Purchase IDs must be an array')
+    })
+
+    test('should delete only purchases in cart status', async () => {
+      // Arrange
+      req.body = ['purchase1', 'purchase2', 'purchase3']
+      req.jwtDecoded = { id: 'user123' }
+
+      const mockDeletedData = {
+        deletedCount: 2, // Only 2 of the 3 were in cart status
+      }
+
+      ;(PurchaseModel.deleteMany as jest.Mock).mockResolvedValue(
+        mockDeletedData
+      )
+
+      // Act
+      await purchaseController.deletePurchases(req as Request, res as Response)
+
+      // Assert
+      expect(PurchaseModel.deleteMany).toHaveBeenCalledWith({
+        user: 'user123',
+        status: STATUS_PURCHASE.IN_CART, // Only deleting items in cart status
+        _id: { $in: ['purchase1', 'purchase2', 'purchase3'] },
+      })
+      expect(responseSuccess).toHaveBeenCalledWith(res, {
+        message: 'Xoá 2 đơn thành công',
+        data: { deleted_count: 2 },
+      })
+    })
+
+    test('should handle database error during deletion', async () => {
+      // Arrange
+      req.body = ['purchase1', 'purchase2']
+      req.jwtDecoded = { id: 'user123' }
+
+      // Mock database error
+      const dbError = new Error('Database connection error')
+      ;(PurchaseModel.deleteMany as jest.Mock).mockRejectedValue(dbError)
+
+      // Act & Assert
+      await expect(
+        purchaseController.deletePurchases(req as Request, res as Response)
+      ).rejects.toThrow('Database connection error')
+    })
+  })
 })
