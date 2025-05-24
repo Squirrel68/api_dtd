@@ -102,18 +102,12 @@ const getShop = async (req: Request, res: Response) => {
 
 const updateShop = async (req: Request, res: Response) => {
   const { name, description, address, phone, avatar } = req.body
-
-  // Get user ID from JWT token
   const userId = req.jwtDecoded.id
-
-  // Find user
   const userDB = await UserModel.findById(userId)
 
   if (!userDB) {
     throw new ErrorHandler(STATUS.BAD_REQUEST, 'Không tìm thấy người dùng')
   }
-
-  // Create updated shop object
   const shopUpdate = omitBy(
     {
       name,
@@ -124,14 +118,10 @@ const updateShop = async (req: Request, res: Response) => {
     },
     (value) => value === undefined || value === ''
   )
-
-  // Merge with existing shop data
   const shop = {
     ...userDB.shop,
     ...shopUpdate,
   }
-
-  // Update user with shop data
   const updatedUser = await UserModel.findByIdAndUpdate(
     userId,
     { shop, roles: [ROLE.ADMIN] },

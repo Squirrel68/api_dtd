@@ -10,6 +10,7 @@ import { cloneDeep } from 'lodash'
 export const addToCart = async (req: Request, res: Response) => {
   const { product_id, buy_count } = req.body
   const product: any = await ProductModel.findById(product_id).lean()
+
   if (product) {
     if (buy_count > product.quantity) {
       throw new ErrorHandler(
