@@ -24,3 +24,4 @@ export const FOLDERS = {
 }
 
 export const ROUTE_IMAGE = 'images'
+export const HOST = process.env.HOST || 'http://localhost:3000'

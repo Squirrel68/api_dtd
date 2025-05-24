@@ -7,6 +7,8 @@
     "test": "jest --detectOpenHandles",
     "test:purchase": "jest --detectOpenHandles __tests__/purchase.controller.test.ts",
     "test:order": "jest --detectOpenHandles __tests__/order.controller.test.ts",
+    "test:product": "jest --detectOpenHandles __tests__/product.controller.test.ts",
+    "test:shop": "jest --detectOpenHandles __tests__/shop.controller.test.ts",
     "start": "nodemon --files index.ts",
     "build": "tsc --project ./",
     "prod": "tsc --project ./ && node ./build/index.js production",
@@ -25,7 +27,9 @@
     "collectCoverageFrom": [
       "controllers/**/*.ts",
       "!**/node_modules/**"
-    ]
+    ],
+    "globalSetup": "./jest.setup.ts",
+    "globalTeardown": "./jest.setup.ts"
   },
   "keywords": [],
   "author": "",
