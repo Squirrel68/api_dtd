@@ -6,6 +6,7 @@
   "scripts": {
     "test": "jest --detectOpenHandles",
     "test:purchase": "jest --detectOpenHandles __tests__/purchase.controller.test.ts",
+    "test:order": "jest --detectOpenHandles __tests__/order.controller.test.ts",
     "start": "nodemon --files index.ts",
     "build": "tsc --project ./",
     "prod": "tsc --project ./ && node ./build/index.js production",
