@@ -118,64 +118,6 @@ export const updatePurchase = async (req: Request, res: Response) => {
   }
 }
 
-export const buyProducts = async (req: Request, res: Response) => {
-  const purchases = []
-  for (const item of req.body) {
-    const product: any = await ProductModel.findById(item.product_id).lean()
-    if (product) {
-      if (item.buy_count > product.quantity) {
-        throw new ErrorHandler(
-          STATUS.NOT_ACCEPTABLE,
-          'Số lượng mua vượt quá số lượng sản phẩm'
-        )
-      } else {
-        let data = await PurchaseModel.findOneAndUpdate(
-          {
-            user: req.jwtDecoded.id,
-            status: STATUS_PURCHASE.IN_CART,
-            product: item.product_id,
-          },
-          {
-            buy_count: item.buy_count,
-            status: STATUS_PURCHASE.WAIT_FOR_CONFIRMATION,
-          },
-          {
-            new: true,
-          }
-        )
-          .populate({
-            path: 'product',
-            populate: [{ path: 'category' }, { path: 'shop' }],
-          })
-          .lean()
-        if (!data) {
-          const purchase = {
-            user: req.jwtDecoded.id,
-            product: item.product_id,
-            buy_count: item.buy_count,
-            price: product.price,
-            price_before_discount: product.price_before_discount,
-            status: STATUS_PURCHASE.WAIT_FOR_CONFIRMATION,
-          }
-          const addedPurchase = await new PurchaseModel(purchase).save()
-          data = await PurchaseModel.findById(addedPurchase._id).populate({
-            path: 'product',
-            populate: [{ path: 'category' }, { path: 'shop' }],
-          })
-        }
-        purchases.push(data)
-      }
-    } else {
-      throw new ErrorHandler(STATUS.NOT_FOUND, 'Không tìm thấy sản phẩm')
-    }
-  }
-  const response = {
-    message: 'Mua thành công',
-    data: purchases,
-  }
-  return responseSuccess(res, response)
-}
-
 export const getPurchases = async (req: Request, res: Response) => {
   const { status = STATUS_PURCHASE.ALL } = req.query
   const user_id = req.jwtDecoded.id

@@ -187,6 +187,7 @@ describe('Shop Controller', () => {
           shop: {
             name: 'Test Shop',
             address: 'Test Address',
+            avatar: null, // Avatar is omitted
           },
         },
         { new: true }

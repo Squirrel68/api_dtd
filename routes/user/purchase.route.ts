@@ -8,14 +8,6 @@ import { wrapAsync } from '../../utils/response'
 export const userPurchaseRouter = Router()
 
 userPurchaseRouter.post(
-  '/buy-products',
-  purchaseMiddleware.buyProductsRules(),
-  helpersMiddleware.entityValidator,
-  authMiddleware.verifyAccessToken,
-  wrapAsync(purchaseController.buyProducts)
-)
-
-userPurchaseRouter.post(
   '/add-to-cart',
   purchaseMiddleware.addToCartRules(),
   helpersMiddleware.entityValidator,
